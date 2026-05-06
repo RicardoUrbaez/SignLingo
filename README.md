@@ -161,6 +161,11 @@ python scripts/train_classifier.py
 
 Ricardo Urbaez
 
+## Documentation
+
+- [Project overview](docs/overview.md)
+- [Database schema](docs/database_schema.md)
+
 ## License
 
 This project is licensed under the MIT License. See the `LICENSE` file for the full text.
