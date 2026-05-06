@@ -75,7 +75,11 @@ This project was adapted and modified for academic use. Some starter computer vi
 
 A short demo video is included to show the SignLingo interface, live camera feed, ASL reference panel, and recognition workflow.
 
-[Watch the SignLingo demo video](docs/media/signlingo-demo.mp4)
+<p align="center">
+  <a href="docs/media/signlingo-demo.mp4">
+    <strong>▶ Watch the SignLingo Demo Video</strong>
+  </a>
+</p>
 
 ---
 
@@ -99,11 +103,15 @@ The app includes ASL reference images to help users compare their hand signs wit
 
 ### ASL Alphabet Reference
 
-<img src="docs/media/asl-alphabet-reference.png" alt="ASL Alphabet Reference" width="700">
+<p align="center">
+  <img src="https://raw.githubusercontent.com/RicardoUrbaez/SignLingo/main/docs/media/asl-alphabet-reference.png" alt="ASL Alphabet Reference" width="700">
+</p>
 
 ### ASL Phrase Reference
 
-<img src="docs/media/asl-phrase-reference.jpg" alt="ASL Phrase Reference" width="700">
+<p align="center">
+  <img src="https://raw.githubusercontent.com/RicardoUrbaez/SignLingo/main/docs/media/asl-phrase-reference.jpg" alt="ASL Phrase Reference" width="700">
+</p>
 
 ---
 
