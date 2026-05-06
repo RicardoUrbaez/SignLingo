@@ -2,7 +2,7 @@
 
 Repository: RicardoUrbaez/SignLingo
 Source: https://github.com/RicardoUrbaez/SignLingo
-Generated at: 2026-05-06T18:20:22.938Z
+
 
 ---
 
