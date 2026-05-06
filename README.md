@@ -77,8 +77,6 @@ A short demo video is included to show the SignLingo interface, live camera feed
 
 [Watch the SignLingo demo video](docs/media/signlingo-demo.mp4)
 
-> Recommended file path: `docs/media/signlingo-demo.mp4`
-
 ---
 
 ## Features
@@ -101,16 +99,11 @@ The app includes ASL reference images to help users compare their hand signs wit
 
 ### ASL Alphabet Reference
 
-![ASL Alphabet Reference](docs/media/asl-alphabet-reference.png)
+<img src="docs/media/asl-alphabet-reference.png" alt="ASL Alphabet Reference" width="700">
 
 ### ASL Phrase Reference
 
-![ASL Phrase Reference](docs/media/asl-phrase-reference.jpg)
-
-> Recommended file paths:
->
-> - `docs/media/asl-alphabet-reference.png`
-> - `docs/media/asl-phrase-reference.jpg`
+<img src="docs/media/asl-phrase-reference.jpg" alt="ASL Phrase Reference" width="700">
 
 ---
 
@@ -164,96 +157,65 @@ SignLingo-Capstone/
 │   └── database_schema.md
 └── archive/
     └── needs_review/
-```
-
-- `app/` contains the Flask app and standalone inference entry point
-- `scripts/` contains dataset collection, dataset building, and model training utilities
-- `models/` stores the generated dataset pickle and trained classifier
-- `data/raw/` stores collected class images and `data/processed/` is reserved for future processed outputs
-- `static/` stores images, CSS, JavaScript, and audio assets used by the live app
-- `templates/` stores the Flask/Jinja HTML templates
-- `docs/media/` stores README media such as the demo video and ASL reference images
-- `docs/` stores supporting project documentation
-- `archive/needs_review/` stores legacy or uncertain files that were intentionally kept out of the main app structure
-
----
-
-## How It Works
-
-1. The webcam captures live video frames.
-2. OpenCV processes the camera feed.
-3. MediaPipe detects the hand and extracts landmark positions.
-4. The landmark data is passed to a trained scikit-learn classifier.
-5. The model predicts the sign being shown.
-6. The predicted result is displayed in the web interface as text.
-7. If enabled, the text-to-speech feature reads the detected sign aloud.
-8. MongoDB can store prediction history and confidence data for later review.
+app/ contains the Flask app and standalone inference entry point
+scripts/ contains dataset collection, dataset building, and model training utilities
+models/ stores the generated dataset pickle and trained classifier
+data/raw/ stores collected class images and data/processed/ is reserved for future processed outputs
+static/ stores images, CSS, JavaScript, and audio assets used by the live app
+templates/ stores the Flask/Jinja HTML templates
+docs/media/ stores README media such as the demo video and ASL reference images
+docs/ stores supporting project documentation
+archive/needs_review/ stores legacy or uncertain files that were intentionally kept out of the main app structure
+How It Works
+The webcam captures live video frames.
+OpenCV processes the camera feed.
+MediaPipe detects the hand and extracts landmark positions.
+The landmark data is passed to a trained scikit-learn classifier.
+The model predicts the sign being shown.
+The predicted result is displayed in the web interface as text.
+If enabled, the text-to-speech feature reads the detected sign aloud.
+MongoDB can store prediction history and confidence data for later review.
 
 The model is trained on collected hand sign images stored in the repository dataset. Those images are processed into landmark-based training data before the classifier is trained.
 
 The main application and scripts resolve paths from their own file locations, so moving code into folders does not break model, template, static, or dataset loading.
 
----
-
-## Dataset and Model Training
+Dataset and Model Training
 
 The project uses a custom dataset built from ASL hand sign images.
 
-- 32 total sign classes
-- 26 alphabet letters
-- 6 common phrase signs
-- 850 images per class
-- Over 27,000 total training images
+32 total sign classes
+26 alphabet letters
+6 common phrase signs
+850 images per class
+Over 27,000 total training images
 
 The dataset was collected using a webcam-based image collection workflow. Images were captured with variation in distance, angle, position, and hand orientation to improve model reliability.
 
----
-
-## Installation
+Installation
 
 Build SignLingo from the source and install dependencies.
 
-1. Clone the repository:
-
-```bash
+Clone the repository:
 git clone https://github.com/RicardoUrbaez/SignLingo
-```
-
-2. Navigate to the project directory:
-
-```bash
+Navigate to the project directory:
 cd SignLingo
-```
-
-3. Create and activate a virtual environment:
-
-```bash
+Create and activate a virtual environment:
 python -m venv .venv
-```
 
 On Windows:
 
-```powershell
 .venv\Scripts\activate
-```
 
 On macOS or Linux:
 
-```bash
 source .venv/bin/activate
-```
-
-4. Install the project dependencies:
-
-```bash
+Install the project dependencies:
 pip install -r requirements.txt
-```
-
-5. Add a `.env` file in the project root if your local setup requires MongoDB or Auth0 configuration.
+Add a .env file in the project root if your local setup requires MongoDB or Auth0 configuration.
 
 Example:
 
-```env
 MONGODB_URI=your_mongodb_connection_string
 MONGODB_DB=signlingo_db
 
@@ -263,77 +225,42 @@ AUTH0_CLIENT_SECRET=your_auth0_client_secret
 AUTH0_CALLBACK_URL=http://127.0.0.1:5000/callback
 AUTH0_LOGOUT_URL=http://127.0.0.1:5000/signin
 APP_SECRET_KEY=your_flask_secret_key
-```
-
-6. Make sure a webcam is connected and available.
-
----
-
-## Running the App
+Make sure a webcam is connected and available.
+Running the App
 
 Start the Flask app:
 
-```bash
 python app/app.py
-```
 
 Then open the browser at:
 
-```text
 http://127.0.0.1:5000/
-```
 
 If using the root-level run scripts:
 
-```powershell
 .\run.ps1
-```
 
 or:
 
-```bat
 run.bat
-```
-
----
-
-## Training the Model
-
-1. Collect hand sign images:
-
-```bash
+Training the Model
+Collect hand sign images:
 python scripts/collect_imgs.py
-```
-
-2. Build the dataset file from the collected images:
-
-```bash
+Build the dataset file from the collected images:
 python scripts/create_dataset.py
-```
-
-3. Train the classifier:
-
-```bash
+Train the classifier:
 python scripts/train_classifier.py
-```
-
-4. Run the app again to use the updated model.
-
----
-
-## Team
+Run the app again to use the updated model.
+Team
 
 SignLingo was created by StackFive.
 
-- Ricardo Alexander Urbaez — Lead AI Engineer
-- Felix Molina — Co-Lead AI Engineer
-- Michael Niemeyer — Database Administrator
-- Nicole Bencosme-Gil — Front End Developer
-- Naomi Joa — Front End Developer
-
----
-
-## Team Contributions
+Ricardo Alexander Urbaez — Lead AI Engineer
+Felix Molina — Co-Lead AI Engineer
+Michael Niemeyer — Database Administrator
+Nicole Bencosme-Gil — Front End Developer
+Naomi Joa — Front End Developer
+Team Contributions
 
 Ricardo Alexander Urbaez led the AI integration work, including the computer vision pipeline, dataset collection, model training, live inference, and backend integration.
 
@@ -345,43 +272,25 @@ Nicole Bencosme-Gil contributed to the front-end interface, visual design, layou
 
 Naomi Joa contributed to the front-end interface, user experience, design refinement, and presentation of the application.
 
----
+Notes
+Auth0 and MongoDB settings are loaded from .env at the project root.
+The .env file should not be committed to GitHub.
+Legacy helper files and inherited backups were moved into archive/needs_review/ instead of being deleted.
+If you retrain the classifier, the updated artifacts are written back into models/.
+If the camera feed does not load, close other apps that may be using the webcam, such as Zoom, Teams, Discord, or the Windows Camera app.
+Large media files, such as demo videos, should be kept in docs/media/ or uploaded through GitHub Releases if the file becomes too large for normal repository use.
+Future Improvements
+Expand support for more signs, words, and short phrases
+Improve recognition accuracy across different lighting and background conditions
+Add better feedback for uncertain predictions
+Support more structured learning and practice features
+Extend the system to cover a wider range of sign language lessons
+Add user progress tracking and practice history
+Build a dashboard for reviewing prediction logs and model performance
+Improve mobile and tablet support
+Documentation
+Project overview
+Database schema
+License
 
-## Notes
-
-- Auth0 and MongoDB settings are loaded from `.env` at the project root.
-- The `.env` file should not be committed to GitHub.
-- Legacy helper files and inherited backups were moved into `archive/needs_review/` instead of being deleted.
-- If you retrain the classifier, the updated artifacts are written back into `models/`.
-- If the camera feed does not load, close other apps that may be using the webcam, such as Zoom, Teams, Discord, or the Windows Camera app.
-- Large media files, such as demo videos, should be kept in `docs/media/` or uploaded through GitHub Releases if the file becomes too large for normal repository use.
-
----
-
-## Future Improvements
-
-- Expand support for more signs, words, and short phrases
-- Improve recognition accuracy across different lighting and background conditions
-- Add better feedback for uncertain predictions
-- Support more structured learning and practice features
-- Extend the system to cover a wider range of sign language lessons
-- Add user progress tracking and practice history
-- Build a dashboard for reviewing prediction logs and model performance
-- Improve mobile and tablet support
-
----
-
-## Documentation
-
-- [Project overview](docs/overview.md)
-- [Database schema](docs/database_schema.md)
-
----
-
-## License
-
-This project is licensed under the MIT License. See the `LICENSE` file for the full text.
-
----
-
-<div align="left"><a href="#top">⬆ Return</a></div>
+This project is licensed under the MIT License. See the LICENSE file for the full text.
