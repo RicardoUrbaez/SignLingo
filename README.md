@@ -39,7 +39,9 @@
 ## Table of Contents
 
 - [Overview](#overview)
+- [Demo](#demo)
 - [Features](#features)
+- [Reference Images](#reference-images)
 - [Tech Stack](#tech-stack)
 - [Project Structure](#project-structure)
 - [How It Works](#how-it-works)
@@ -69,6 +71,16 @@ This project was adapted and modified for academic use. Some starter computer vi
 
 ---
 
+## Demo
+
+A short demo video is included to show the SignLingo interface, live camera feed, ASL reference panel, and recognition workflow.
+
+[Watch the SignLingo demo video](docs/media/signlingo-demo.mp4)
+
+> Recommended file path: `docs/media/signlingo-demo.mp4`
+
+---
+
 ## Features
 
 - Real-time hand gesture recognition from webcam input
@@ -80,6 +92,25 @@ This project was adapted and modified for academic use. Some starter computer vi
 - Auth0 login and sign-up flow for protected dashboard access
 - MongoDB Atlas support for prediction logging and database documentation
 - Built for education, accessibility, and sign language practice
+
+---
+
+## Reference Images
+
+The app includes ASL reference images to help users compare their hand signs with the expected alphabet and phrase gestures.
+
+### ASL Alphabet Reference
+
+![ASL Alphabet Reference](docs/media/asl-alphabet-reference.png)
+
+### ASL Phrase Reference
+
+![ASL Phrase Reference](docs/media/asl-phrase-reference.jpg)
+
+> Recommended file paths:
+>
+> - `docs/media/asl-alphabet-reference.png`
+> - `docs/media/asl-phrase-reference.jpg`
 
 ---
 
@@ -125,6 +156,10 @@ SignLingo-Capstone/
 │   └── js/
 ├── templates/
 ├── docs/
+│   ├── media/
+│   │   ├── signlingo-demo.mp4
+│   │   ├── asl-alphabet-reference.png
+│   │   └── asl-phrase-reference.jpg
 │   ├── overview.md
 │   └── database_schema.md
 └── archive/
@@ -135,8 +170,9 @@ SignLingo-Capstone/
 - `scripts/` contains dataset collection, dataset building, and model training utilities
 - `models/` stores the generated dataset pickle and trained classifier
 - `data/raw/` stores collected class images and `data/processed/` is reserved for future processed outputs
-- `static/` stores images, CSS, JavaScript, and audio assets
+- `static/` stores images, CSS, JavaScript, and audio assets used by the live app
 - `templates/` stores the Flask/Jinja HTML templates
+- `docs/media/` stores README media such as the demo video and ASL reference images
 - `docs/` stores supporting project documentation
 - `archive/needs_review/` stores legacy or uncertain files that were intentionally kept out of the main app structure
 
@@ -318,6 +354,7 @@ Naomi Joa contributed to the front-end interface, user experience, design refine
 - Legacy helper files and inherited backups were moved into `archive/needs_review/` instead of being deleted.
 - If you retrain the classifier, the updated artifacts are written back into `models/`.
 - If the camera feed does not load, close other apps that may be using the webcam, such as Zoom, Teams, Discord, or the Windows Camera app.
+- Large media files, such as demo videos, should be kept in `docs/media/` or uploaded through GitHub Releases if the file becomes too large for normal repository use.
 
 ---
 
