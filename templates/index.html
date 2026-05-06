@@ -1,0 +1,2105 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <title>SignLingo — Real-Time Sign Language to Text</title>
+    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+    <meta name="description" content="SignLingo: A computer vision accessibility tool that detects ASL hand gestures and translates them into readable text." />
+
+    <!-- Google Fonts — Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+
+    <!-- Bootstrap CSS (for carousel) -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0/dist/css/bootstrap.min.css" rel="stylesheet" />
+
+    <!-- GSAP + ScrollTrigger (for ScrollReveal) -->
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/gsap.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/ScrollTrigger.min.js"></script>
+
+    <style>
+        :root {
+            --bg-black: #020617;
+            --bg-navy: #071225;
+            --bg-navy-soft: #0b1730;
+            --panel: rgba(15, 23, 42, 0.72);
+            --panel-strong: rgba(15, 23, 42, 0.9);
+            --panel-soft: rgba(15, 23, 42, 0.56);
+            --border: rgba(148, 163, 184, 0.16);
+            --border-strong: rgba(96, 165, 250, 0.28);
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --text-soft: rgba(226, 232, 240, 0.76);
+            --blue: #3b82f6;
+            --blue-soft: #60a5fa;
+            --cyan: #38bdf8;
+            --shadow-glow: 0 24px 80px rgba(37, 99, 235, 0.18);
+            --shadow-soft: 0 22px 60px rgba(2, 6, 23, 0.36);
+            --radius-lg: 28px;
+            --radius-md: 22px;
+            --sl-nav-max: 1380px;
+            --sl-content-max: 1440px;
+        }
+
+        *, *::before, *::after {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html {
+            scroll-behavior: smooth;
+        }
+
+        html, body {
+            width: 100%;
+            overflow-x: hidden;
+            font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+            background: radial-gradient(circle at 15% 12%, rgba(56, 189, 248, 0.11), transparent 26%),
+                        radial-gradient(circle at 85% 18%, rgba(59, 130, 246, 0.16), transparent 30%),
+                        radial-gradient(circle at 50% 80%, rgba(14, 165, 233, 0.08), transparent 28%),
+                        linear-gradient(180deg, #020617 0%, #071225 46%, #030712 100%);
+            color: var(--text-main);
+        }
+
+        body {
+            position: relative;
+            min-height: 100vh;
+        }
+
+        body::before,
+        body::after {
+            content: '';
+            position: fixed;
+            inset: auto;
+            pointer-events: none;
+            z-index: 0;
+            filter: blur(90px);
+            opacity: 0.42;
+        }
+
+        body::before {
+            width: 340px;
+            height: 340px;
+            top: 90px;
+            left: -80px;
+            background: rgba(56, 189, 248, 0.22);
+        }
+
+        body::after {
+            width: 420px;
+            height: 420px;
+            top: 420px;
+            right: -110px;
+            background: rgba(59, 130, 246, 0.16);
+        }
+
+        a {
+            text-decoration: none;
+            color: inherit;
+        }
+
+        body > * {
+            position: relative;
+            z-index: 1;
+        }
+
+        .sl-container {
+            width: min(var(--sl-content-max), calc(100% - 96px));
+            margin: 0 auto;
+        }
+
+        .bg-orbs,
+        .bg-noise {
+            display: none;
+        }
+
+        @keyframes pageFadeUp {
+            0% {
+                opacity: 0;
+                transform: translateY(18px);
+            }
+            100% {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .fade-up {
+            opacity: 0;
+            animation: pageFadeUp 0.9s ease-out forwards;
+        }
+
+        .fade-delay-1 { animation-delay: 0.08s; }
+        .fade-delay-2 { animation-delay: 0.16s; }
+        .fade-delay-3 { animation-delay: 0.24s; }
+        .fade-delay-4 { animation-delay: 0.32s; }
+
+        .reveal,
+        .reveal.visible {
+            opacity: 1;
+            transform: none;
+            transition: none;
+        }
+
+        .scroll-reveal-container,
+        .scroll-reveal-text {
+            margin: 0;
+            padding: 0;
+            overflow: visible;
+            font-size: inherit;
+            font-weight: inherit;
+            line-height: inherit;
+            color: inherit;
+        }
+
+        .scroll-reveal-text .sr-word {
+            display: inline-block;
+            will-change: opacity, filter;
+        }
+
+        .sl-navbar {
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+            width: 100%;
+            background: rgba(2, 6, 23, 0.72);
+            border-bottom: 1px solid rgba(148, 163, 184, 0.14);
+            backdrop-filter: blur(18px);
+            -webkit-backdrop-filter: blur(18px);
+        }
+
+        .sl-navbar-inner {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 32px;
+            width: min(var(--sl-nav-max), calc(100% - 96px));
+            margin: 0 auto;
+            padding: 20px 0;
+        }
+
+        .sl-navbar nav {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .brand {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .ku-logo {
+            width: 66px;
+            height: 66px;
+            object-fit: contain;
+            border-radius: 12px;
+            background: rgba(255, 255, 255, 0.92);
+            padding: 5px;
+            box-shadow: 0 10px 28px rgba(2, 6, 23, 0.28);
+        }
+
+        .brand-text {
+            font-size: 1.7rem;
+            font-weight: 800;
+            color: var(--text-main);
+            letter-spacing: -0.03em;
+        }
+
+        .brand-text span {
+            display: inline-block;
+        }
+
+        .shiny-text {
+            display: inline-block;
+            background-size: 200% auto;
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+            color: transparent;
+        }
+
+        .shiny-text[data-paused='true'] {
+            animation-play-state: paused !important;
+        }
+
+        .sl-nav-links {
+            display: flex;
+            align-items: center;
+            gap: 34px;
+            font-size: 1.18rem;
+            font-weight: 700;
+            list-style: none;
+            color: var(--text-muted);
+            flex-wrap: wrap;
+        }
+
+        .sl-nav-meta {
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            gap: 28px;
+            margin-left: 20px;
+            width: 100%;
+        }
+
+        .sl-nav-shell {
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            gap: 28px;
+            width: 100%;
+            min-width: 0;
+        }
+
+        .sl-nav-auth-stack {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            margin-left: 8px;
+            flex-shrink: 0;
+        }
+
+        .sl-user-chip,
+        .sl-logout-link {
+            border: 1px solid rgba(148, 163, 184, 0.18);
+            background: rgba(15, 23, 42, 0.55);
+            backdrop-filter: blur(14px);
+            -webkit-backdrop-filter: blur(14px);
+            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+            transition: transform 0.2s ease, border-color 0.2s ease, background 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .sl-user-chip {
+            padding: 8px 16px;
+            border-radius: 999px;
+            color: rgba(203, 213, 225, 0.88);
+            font-size: 0.85rem;
+            line-height: 1.2;
+            white-space: nowrap;
+            max-width: min(320px, 100%);
+            overflow: hidden;
+            text-overflow: ellipsis;
+            text-align: center;
+        }
+
+        .sl-logout-link {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 10px 22px;
+            border-radius: 999px;
+            color: rgba(248, 250, 252, 0.92);
+            font-size: 0.9rem;
+            font-weight: 800;
+            text-decoration: none;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .sl-logout-link::after {
+            content: '';
+            position: absolute;
+            left: 18px;
+            right: 18px;
+            bottom: 8px;
+            height: 2px;
+            border-radius: 999px;
+            background: linear-gradient(90deg, var(--blue-soft), var(--cyan));
+            opacity: 0;
+            transform: scaleX(0.65);
+            transition: opacity 0.2s ease, transform 0.2s ease;
+        }
+
+        .sl-logout-link:hover,
+        .sl-user-chip:hover {
+            transform: translateY(-1px);
+            border-color: rgba(96, 165, 250, 0.5);
+            background: rgba(30, 41, 59, 0.75);
+            box-shadow: 0 0 24px rgba(59, 130, 246, 0.18), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+        }
+
+        .sl-logout-link:hover::after {
+            opacity: 1;
+            transform: scaleX(1);
+        }
+
+        .sl-nav-links a {
+            position: relative;
+            transition: color 0.2s ease;
+        }
+
+        .sl-nav-links a::after {
+            content: '';
+            position: absolute;
+            left: 0;
+            bottom: -5px;
+            width: 0;
+            height: 2px;
+            border-radius: 999px;
+            background: linear-gradient(90deg, var(--blue-soft), var(--cyan));
+            transition: width 0.22s ease;
+        }
+
+        .sl-nav-links a:hover {
+            color: var(--text-main);
+        }
+
+        .sl-nav-links a:hover::after {
+            width: 100%;
+        }
+
+        .sl-hero {
+            width: 100%;
+            min-height: 94vh;
+            padding: 74px 0 56px;
+        }
+
+        .sl-hero-inner {
+            width: min(1500px, calc(100% - 96px));
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: minmax(0, 52%) minmax(0, 48%);
+            gap: clamp(36px, 4vw, 64px);
+            align-items: center;
+        }
+
+        .sl-hero-text {
+            max-width: 720px;
+        }
+
+        @media (min-width: 1024px) {
+            .sl-hero-inner {
+                align-items: start;
+                padding-top: 72px;
+            }
+
+            .sl-hero-text {
+                transform: translateY(-44px);
+            }
+        }
+
+        .sl-hero-text h1 {
+            font-size: clamp(3.3rem, 6vw, 5.7rem);
+            line-height: 0.98;
+            margin-bottom: 18px;
+            font-weight: 900;
+            color: var(--text-main);
+            letter-spacing: -0.06em;
+            max-width: 8.5ch;
+        }
+
+        .sl-subtitle {
+            font-size: clamp(1.04rem, 1.3vw, 1.22rem);
+            color: #c9ddff;
+            line-height: 1.55;
+            font-weight: 700;
+            margin-bottom: 20px;
+        }
+
+        .sl-hero-text p {
+            color: var(--text-soft);
+            font-size: 1.06rem;
+            line-height: 1.9;
+            max-width: 640px;
+            margin-bottom: 32px;
+        }
+
+        .sl-hero-buttons {
+            display: flex;
+            gap: 14px;
+            flex-wrap: wrap;
+        }
+
+        .sl-btn {
+            border-radius: 14px;
+            transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease, border-color 0.2s ease;
+            padding: 14px 24px;
+            border: 1px solid transparent;
+            font-size: 0.96rem;
+            font-weight: 700;
+            cursor: pointer;
+            font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 172px;
+        }
+
+        .sl-btn:hover {
+            transform: translateY(-2px);
+        }
+
+        .sl-btn-primary {
+            background: linear-gradient(135deg, var(--blue), #2563eb 55%, #1d4ed8 100%);
+            color: #ffffff;
+            box-shadow: var(--shadow-glow);
+        }
+
+        .sl-btn-primary:hover {
+            box-shadow: 0 26px 70px rgba(37, 99, 235, 0.28);
+        }
+
+        .sl-btn-outline {
+            background: rgba(15, 23, 42, 0.44);
+            color: var(--text-main);
+            border-color: rgba(148, 163, 184, 0.18);
+            backdrop-filter: blur(14px);
+        }
+
+        .sl-btn-outline:hover {
+            background: rgba(30, 41, 59, 0.84);
+            border-color: rgba(96, 165, 250, 0.34);
+            box-shadow: 0 18px 40px rgba(2, 6, 23, 0.28);
+        }
+
+        .sl-btn-danger {
+            background: linear-gradient(135deg, #dc2626, #b91c1c);
+            color: #ffffff;
+            box-shadow: 0 16px 34px rgba(127, 29, 29, 0.28);
+        }
+
+        .sl-btn.active {
+            background: linear-gradient(135deg, #16a34a, #15803d);
+            color: #ffffff;
+            box-shadow: 0 16px 34px rgba(21, 128, 61, 0.28);
+        }
+
+        .sl-hero-visual {
+            display: flex;
+            justify-content: flex-end;
+            align-items: center;
+            min-width: 0;
+        }
+
+        .sl-device {
+            width: min(100%, 680px);
+            padding: 26px;
+            border-radius: 30px;
+            background: linear-gradient(180deg, rgba(15, 23, 42, 0.82), rgba(8, 15, 31, 0.9));
+            border: 1px solid rgba(96, 165, 250, 0.18);
+            box-shadow: var(--shadow-soft), var(--shadow-glow);
+            backdrop-filter: blur(18px);
+            -webkit-backdrop-filter: blur(18px);
+        }
+
+        .sl-device-screen {
+            background: linear-gradient(180deg, rgba(15, 23, 42, 0.74), rgba(2, 6, 23, 0.86));
+            border-radius: 24px;
+            border: 1px solid rgba(148, 163, 184, 0.12);
+            padding: 26px;
+            color: var(--text-main);
+            overflow: visible;
+        }
+
+        .sl-tech-stack-head {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            margin-bottom: 22px;
+        }
+
+        .sl-tech-stack-kicker {
+            font-size: 0.74rem;
+            line-height: 1;
+            letter-spacing: 0.18em;
+            text-transform: uppercase;
+            font-weight: 700;
+            color: #7dd3fc;
+        }
+
+        .sl-tech-stack-title {
+            font-size: clamp(1.7rem, 2.4vw, 2.3rem);
+            line-height: 1.08;
+            font-weight: 800;
+            letter-spacing: -0.04em;
+            max-width: 13ch;
+        }
+
+        .architecture-card {
+            padding: 8px;
+        }
+
+        .architecture-title {
+            font-size: clamp(2rem, 2.6vw, 3.15rem);
+            line-height: 1.06;
+            white-space: normal;
+            letter-spacing: -0.04em;
+            max-width: 14ch;
+            text-wrap: balance;
+        }
+
+        .architecture-card .sl-tech-stack-copy {
+            font-size: 1rem;
+            max-width: 56ch;
+        }
+
+        .architecture-card .sl-tech-stack-grid {
+            gap: 16px;
+        }
+
+        .architecture-card .tech-chip {
+            padding: 14px;
+        }
+
+        .sl-tech-stack-copy {
+            font-size: 0.96rem;
+            line-height: 1.75;
+            color: var(--text-muted);
+            max-width: 48ch;
+        }
+
+        .sl-tech-stack-grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 14px;
+        }
+
+        .sl-tech-group {
+            padding: 16px;
+            border-radius: 18px;
+            background: rgba(15, 23, 42, 0.68);
+            border: 1px solid rgba(148, 163, 184, 0.14);
+            transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .sl-tech-group:hover {
+            transform: translateY(-2px);
+            border-color: rgba(96, 165, 250, 0.32);
+            box-shadow: 0 18px 34px rgba(2, 6, 23, 0.28);
+        }
+
+        .sl-tech-group-title {
+            font-size: 0.78rem;
+            text-transform: uppercase;
+            letter-spacing: 0.14em;
+            font-weight: 800;
+            color: #dbeafe;
+            margin-bottom: 12px;
+        }
+
+        .sl-tech-chips {
+            display: grid;
+            gap: 10px;
+        }
+
+        .tech-chip {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 12px;
+            border-radius: 14px;
+            background: rgba(15, 23, 42, 0.68);
+            border: 1px solid rgba(148, 163, 184, 0.14);
+            transition: transform 0.2s ease, border-color 0.2s ease, background 0.2s ease;
+        }
+
+        .tech-chip:hover {
+            transform: translateY(-2px);
+            border-color: rgba(96, 165, 250, 0.45);
+            background: rgba(30, 41, 59, 0.9);
+        }
+
+        .tech-chip-icon {
+            width: 34px;
+            height: 34px;
+            flex: 0 0 34px;
+            border-radius: 50%;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(135deg, rgba(59, 130, 246, 0.3), rgba(56, 189, 248, 0.2));
+            border: 1px solid rgba(96, 165, 250, 0.24);
+            color: #eff6ff;
+            font-size: 0.74rem;
+            font-weight: 800;
+            letter-spacing: 0.06em;
+        }
+
+        .tech-logo {
+            width: 34px;
+            height: 34px;
+            object-fit: contain;
+            border-radius: 8px;
+            background: rgba(255, 255, 255, 0.92);
+            padding: 4px;
+            flex-shrink: 0;
+        }
+
+        .tech-chip-body {
+            min-width: 0;
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+
+        .tech-chip-name {
+            font-size: 0.92rem;
+            line-height: 1.2;
+            font-weight: 700;
+            color: var(--text-main);
+        }
+
+        .tech-chip-role {
+            font-size: 0.74rem;
+            line-height: 1.35;
+            color: var(--text-muted);
+        }
+
+        .sl-section {
+            width: 100%;
+            padding: 92px 0;
+        }
+
+        .sl-section-dark,
+        .sl-section-navy,
+        .sl-section-mid {
+            background: transparent;
+        }
+
+        .sl-section-title {
+            text-align: center;
+            font-size: clamp(2.1rem, 4vw, 3.2rem);
+            margin-bottom: 16px;
+            color: var(--text-main);
+            font-weight: 800;
+            letter-spacing: -0.04em;
+        }
+
+        .sl-section-subtitle {
+            text-align: center;
+            max-width: 760px;
+            margin: 0 auto 48px;
+            color: var(--text-muted);
+            font-size: 1rem;
+            line-height: 1.8;
+        }
+
+        .sl-card,
+        .sl-panel,
+        .sl-output-panel,
+        .sl-team-card {
+            background: linear-gradient(180deg, rgba(15, 23, 42, 0.72), rgba(15, 23, 42, 0.56));
+            border-radius: var(--radius-md);
+            border: 1px solid var(--border);
+            box-shadow: var(--shadow-soft);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            transition: transform 0.22s ease, border-color 0.22s ease, box-shadow 0.22s ease;
+        }
+
+        .sl-card:hover,
+        .sl-panel:hover,
+        .sl-output-panel:hover,
+        .sl-team-card:hover {
+            transform: translateY(-4px);
+            border-color: rgba(96, 165, 250, 0.32);
+            box-shadow: 0 28px 70px rgba(2, 6, 23, 0.42), 0 0 0 1px rgba(56, 189, 248, 0.08);
+        }
+
+        .sl-cards-3 {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 24px;
+            width: 100%;
+        }
+
+        .sl-card {
+            padding: 32px 28px;
+            min-height: 224px;
+        }
+
+        .sl-icon-circle {
+            width: 54px;
+            height: 54px;
+            border-radius: 16px;
+            background: linear-gradient(135deg, rgba(59, 130, 246, 0.24), rgba(56, 189, 248, 0.14));
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.4rem;
+            margin-bottom: 18px;
+            border: 1px solid rgba(96, 165, 250, 0.24);
+        }
+
+        .sl-card h3,
+        .sl-panel h3,
+        .sl-output-panel h3 {
+            font-size: 1.18rem;
+            margin-bottom: 12px;
+            color: var(--text-main);
+            font-weight: 700;
+            letter-spacing: -0.02em;
+        }
+
+        .sl-card p,
+        .sl-panel p {
+            color: var(--text-muted);
+            line-height: 1.8;
+            font-size: 0.95rem;
+        }
+
+        .sl-app-grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 24px;
+            align-items: stretch;
+            margin-bottom: 24px;
+        }
+
+        .sl-panel,
+        .sl-output-panel {
+            padding: 28px;
+        }
+
+        .sl-video-wrap {
+            width: 100%;
+            height: 500px;
+            border-radius: 18px;
+            overflow: hidden;
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #000000;
+            border: 1px solid rgba(148, 163, 184, 0.14);
+        }
+
+        .camera-feed,
+        #cameraFeed,
+        .sl-video-wrap img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: block;
+            border-radius: 18px;
+            background: #000;
+            position: relative;
+            z-index: 2;
+            opacity: 1;
+            filter: none;
+            mix-blend-mode: normal;
+        }
+
+        .sl-video-wrap::after {
+            content: none;
+            pointer-events: none;
+        }
+
+        .sl-video-wrap video {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: none;
+        }
+
+        .asl-carousel {
+            position: relative;
+            width: 100%;
+            min-height: 500px;
+            background: rgba(2, 6, 23, 0.76);
+            border-radius: 18px;
+            overflow: visible;
+            padding: 0 62px;
+            border: 1px solid rgba(148, 163, 184, 0.14);
+        }
+
+        .asl-carousel .carousel-inner,
+        .asl-carousel .carousel-item,
+        .asl-reference-img {
+            height: 500px;
+        }
+
+        .asl-carousel .carousel-inner {
+            border-radius: 16px;
+            overflow: hidden;
+            background: rgba(255, 255, 255, 0.98);
+        }
+
+        .asl-reference-img {
+            width: 100%;
+            object-fit: contain !important;
+            object-position: center;
+            background: #ffffff;
+            padding: 18px;
+            display: block;
+            opacity: 1;
+            filter: none;
+            mix-blend-mode: normal;
+        }
+
+        .asl-carousel-control {
+            width: 46px;
+            height: 46px;
+            top: 50%;
+            transform: translateY(-50%);
+            opacity: 1;
+            background: linear-gradient(135deg, var(--blue), var(--cyan));
+            border-radius: 50%;
+            border: 1px solid rgba(255, 255, 255, 0.16);
+            position: absolute;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 16px 36px rgba(37, 99, 235, 0.26);
+        }
+
+        .carousel-control-prev.asl-carousel-control { left: 12px; }
+        .carousel-control-next.asl-carousel-control { right: 12px; }
+
+        .asl-carousel-control .carousel-control-prev-icon,
+        .asl-carousel-control .carousel-control-next-icon {
+            width: 22px;
+            height: 22px;
+            filter: brightness(0) invert(1);
+        }
+
+        .sl-output-panel {
+            width: 100%;
+        }
+
+        .sl-field-label,
+        .sl-voice-label {
+            font-size: 0.78rem;
+            color: var(--text-muted);
+            margin-bottom: 8px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+        }
+
+        .sl-text-input,
+        .sl-voice-select {
+            width: 100%;
+            background: rgba(2, 6, 23, 0.5);
+            border: 1px solid rgba(148, 163, 184, 0.16);
+            border-radius: 14px;
+            padding: 14px 16px;
+            color: var(--text-main);
+            font-size: 1rem;
+            font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+            outline: none;
+            transition: border-color 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+        }
+
+        .sl-text-input {
+            margin-bottom: 18px;
+        }
+
+        .sl-text-input:focus,
+        .sl-voice-select:focus {
+            border-color: rgba(96, 165, 250, 0.42);
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.12);
+            background: rgba(15, 23, 42, 0.72);
+        }
+
+        .sl-controls-row,
+        .sl-voice-row {
+            display: flex;
+            gap: 14px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        .sl-voice-row {
+            margin-top: 14px;
+        }
+
+        .sl-voice-select {
+            flex: 1;
+            min-width: 220px;
+        }
+
+        .sl-cards-4 {
+            display: grid;
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+            gap: 24px;
+            width: 100%;
+        }
+
+        .sl-step-number {
+            width: 42px;
+            height: 42px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--blue), var(--cyan));
+            color: #ffffff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 800;
+            margin-bottom: 18px;
+            font-size: 1rem;
+            box-shadow: 0 14px 30px rgba(37, 99, 235, 0.22);
+        }
+
+        .sl-team-grid {
+            display: grid;
+            grid-template-columns: repeat(5, minmax(0, 1fr));
+            gap: 22px;
+            width: 100%;
+        }
+
+        .sl-team-card {
+            padding: 28px 18px 22px;
+            text-align: center;
+        }
+
+        .team-avatar {
+            width: 120px;
+            height: 120px;
+            border-radius: 50%;
+            overflow: hidden;
+            margin: 0 auto 22px;
+            border: 2px solid rgba(96, 165, 250, 0.26);
+            box-shadow: 0 18px 34px rgba(2, 6, 23, 0.24);
+            background: linear-gradient(135deg, rgba(59, 130, 246, 0.2), rgba(56, 189, 248, 0.1));
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+        }
+
+        .team-avatar .team-photo {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            object-position: center;
+            display: block;
+            position: absolute;
+            inset: 0;
+        }
+
+        .placeholder-avatar {
+            background: linear-gradient(135deg, rgba(59, 130, 246, 0.66), rgba(56, 189, 248, 0.44));
+        }
+
+        .placeholder-avatar span {
+            color: #ffffff;
+            font-size: 2rem;
+            font-weight: 800;
+        }
+
+        .sl-team-name {
+            font-size: 0.94rem;
+            color: var(--text-main);
+            font-weight: 700;
+            margin-bottom: 5px;
+        }
+
+        .sl-team-role {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            margin-bottom: 14px;
+        }
+
+        .sl-linkedin-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            background: rgba(15, 23, 42, 0.64);
+            color: #dbeafe;
+            border: 1px solid rgba(148, 163, 184, 0.16);
+            border-radius: 10px;
+            padding: 8px 13px;
+            font-size: 0.78rem;
+            font-weight: 600;
+            transition: background 0.2s ease, color 0.2s ease, border-color 0.2s ease, transform 0.2s ease;
+        }
+
+        .sl-linkedin-btn:hover {
+            transform: translateY(-2px);
+            background: rgba(30, 41, 59, 0.9);
+            color: #ffffff;
+            border-color: rgba(96, 165, 250, 0.34);
+        }
+
+        .sl-linkedin-soon {
+            opacity: 0.62;
+            pointer-events: none;
+        }
+
+        .sl-linkedin-icon {
+            width: 14px;
+            height: 14px;
+        }
+
+        .sl-footer {
+            background: rgba(2, 6, 23, 0.86);
+            color: var(--text-main);
+            padding: 54px 0 24px;
+            width: 100%;
+            border-top: 1px solid rgba(148, 163, 184, 0.12);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+        }
+
+        .sl-footer-grid {
+            display: grid;
+            grid-template-columns: 2fr 1fr 1fr;
+            gap: 32px;
+            margin-bottom: 28px;
+        }
+
+        .sl-footer-logo {
+            font-size: 1.34rem;
+            font-weight: 800;
+            margin-bottom: 14px;
+        }
+
+        .sl-footer-logo span {
+            color: #93c5fd;
+        }
+
+        .sl-footer-text,
+        .sl-footer-links a {
+            color: var(--text-muted);
+            line-height: 1.8;
+        }
+
+        .sl-footer-links a:hover {
+            color: var(--text-main);
+        }
+
+        .sl-footer-col-title {
+            font-size: 0.9rem;
+            font-weight: 700;
+            margin-bottom: 14px;
+            color: var(--text-main);
+        }
+
+        .sl-footer-links {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .sl-footer-bottom {
+            border-top: 1px solid rgba(148, 163, 184, 0.12);
+            padding-top: 18px;
+            text-align: center;
+            color: rgba(148, 163, 184, 0.82);
+            font-size: 0.92rem;
+        }
+
+        @media (max-width: 1200px) {
+            .sl-team-grid {
+                grid-template-columns: repeat(3, 1fr);
+            }
+
+            .sl-tech-stack-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        @media (max-width: 1100px) {
+            .sl-hero-inner,
+            .sl-app-grid,
+            .sl-footer-grid,
+            .sl-cards-3 {
+                grid-template-columns: 1fr;
+            }
+
+            .sl-cards-4 {
+                grid-template-columns: repeat(2, 1fr);
+            }
+
+            .sl-hero {
+                min-height: auto;
+            }
+
+            .sl-hero-visual {
+                justify-content: flex-start;
+            }
+
+            .sl-device {
+                width: min(100%, 760px);
+            }
+        }
+
+        @media (max-width: 768px) {
+            .sl-container,
+            .sl-navbar-inner,
+            .sl-hero-inner {
+                width: calc(100% - 44px);
+            }
+
+            .sl-navbar-inner {
+                flex-direction: column;
+                gap: 16px;
+                align-items: flex-start;
+            }
+
+            .architecture-title {
+                white-space: normal;
+            }
+
+            .architecture-card {
+                padding: 0;
+            }
+
+            .sl-navbar nav {
+                width: 100%;
+            }
+
+            .sl-nav-shell {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 16px;
+            }
+
+            .sl-nav-links {
+                flex-wrap: wrap;
+                gap: 16px;
+            }
+
+            .sl-nav-meta {
+                margin-left: 0;
+                width: 100%;
+                justify-content: flex-start;
+            }
+
+            .sl-nav-auth-stack {
+                align-items: center;
+                margin-left: 0;
+                width: 100%;
+            }
+
+            .sl-user-chip {
+                max-width: 100%;
+            }
+
+            .sl-hero {
+                padding-top: 46px;
+                padding-bottom: 36px;
+            }
+
+            .sl-hero-text h1 {
+                font-size: 2.8rem;
+            }
+
+            .sl-device,
+            .sl-device-screen,
+            .sl-card,
+            .sl-panel,
+            .sl-output-panel {
+                padding: 22px;
+            }
+
+            .sl-video-wrap,
+            .asl-carousel,
+            .asl-carousel .carousel-inner,
+            .asl-carousel .carousel-item,
+            .asl-reference-img {
+                height: 340px;
+                min-height: 340px;
+            }
+
+            .asl-carousel {
+                padding: 0 44px;
+            }
+
+            .sl-cards-4,
+            .sl-team-grid,
+            .sl-footer-grid,
+            .sl-tech-stack-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .sl-btn {
+                width: 100%;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .sl-team-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .sl-hero-inner,
+            .sl-container,
+            .sl-navbar-inner {
+                width: calc(100% - 32px);
+            }
+
+            .architecture-title {
+                white-space: normal;
+            }
+        }
+    </style>
+
+</head>
+
+<body>
+
+    <!-- Background ambient orbs -->
+    <div class="bg-orbs" aria-hidden="true">
+        <div class="bg-orb bg-orb-1"></div>
+        <div class="bg-orb bg-orb-2"></div>
+        <div class="bg-orb bg-orb-3"></div>
+    </div>
+    <div class="bg-noise" aria-hidden="true"></div>
+
+    <!-- ==================== NAVBAR ==================== -->
+    <header class="sl-navbar">
+        <div class="sl-navbar-inner">
+            <div class="brand fade-up">
+                <img src="{{ url_for('static', filename='images/KULOGO.jpeg') }}" alt="KU Logo" class="ku-logo">
+                <span class="brand-text">Sign<span id="brandShiny">Lingo</span></span>
+            </div>
+            <nav>
+                <div class="sl-nav-meta">
+                    <div class="sl-nav-shell">
+                        <ul class="sl-nav-links">
+                            <li><a href="#home">Home</a></li>
+                            <li><a href="#features">Features</a></li>
+                            <li><a href="#practice">Practice</a></li>
+                            <li><a href="#team">Team</a></li>
+                            <li><a href="#about">About</a></li>
+                        </ul>
+                        {% if user %}
+                        <div class="sl-nav-auth-stack">
+                            <a class="sl-logout-link" href="{{ url_for('logout') }}">Logout</a>
+                            <div class="sl-user-chip">
+                                Signed in as {{ user.get('name') or user.get('email') or 'Auth0 User' }}
+                            </div>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </nav>
+        </div>
+    </header>
+
+    <!-- ==================== HERO ==================== -->
+    <section class="sl-hero" id="home">
+        <div class="sl-hero-inner">
+            <div class="sl-hero-text">
+                <h1 class="fade-up fade-delay-1">SignLingo</h1>
+                <div class="sl-subtitle fade-up fade-delay-2" id="heroSubtitleShiny">Real-Time Sign Language to Text</div>
+                <p class="fade-up fade-delay-3" data-scroll-reveal data-sr-blur="8" data-sr-opacity="0.05" data-sr-rotation="4">An accessibility-focused computer vision platform that recognizes ASL gestures, translates them into readable text, and supports speech output for clearer communication.</p>
+                <div class="sl-hero-buttons fade-up fade-delay-4">
+                    <a class="sl-btn sl-btn-primary" href="#practice">Try It Now</a>
+                    <a class="sl-btn sl-btn-outline" href="#about">How It Works</a>
+                </div>
+            </div>
+
+            <div class="sl-hero-visual">
+                <div class="sl-device fade-up fade-delay-4">
+                    <div class="sl-device-screen">
+                        <div class="sl-tech-stack-card architecture-card">
+                            <div class="sl-tech-stack-head">
+                                <div class="sl-tech-stack-kicker">Product Stack</div>
+                                <div class="sl-tech-stack-title architecture-title">SignLingo System Architecture</div>
+                                <div class="sl-tech-stack-copy">A clean, static overview of the tools powering the demo across interface, backend, computer vision, and speech interaction.</div>
+                            </div>
+                            <div class="sl-tech-stack-grid">
+                                <section class="sl-tech-group">
+                                    <h3 class="sl-tech-group-title">Frontend</h3>
+                                    <div class="sl-tech-chips">
+                                        <div class="tech-chip"><img class="tech-logo" src="{{ url_for('static', filename='images/HTML.png') }}" alt="HTML5 logo"><span class="tech-chip-body"><span class="tech-chip-name">HTML5</span><span class="tech-chip-role">Page structure</span></span></div>
+                                        <div class="tech-chip"><img class="tech-logo" src="{{ url_for('static', filename='images/CSS.png') }}" alt="CSS3 logo"><span class="tech-chip-body"><span class="tech-chip-name">CSS3</span><span class="tech-chip-role">Visual styling</span></span></div>
+                                        <div class="tech-chip"><img class="tech-logo" src="{{ url_for('static', filename='images/JavaScript.png') }}" alt="JavaScript logo"><span class="tech-chip-body"><span class="tech-chip-name">JavaScript</span><span class="tech-chip-role">Client interactions</span></span></div>
+                                    </div>
+                                </section>
+                                <section class="sl-tech-group">
+                                    <h3 class="sl-tech-group-title">Backend</h3>
+                                    <div class="sl-tech-chips">
+                                        <div class="tech-chip"><img class="tech-logo" src="{{ url_for('static', filename='images/PYTHON.png') }}" alt="Python logo"><span class="tech-chip-body"><span class="tech-chip-name">Python</span><span class="tech-chip-role">Application logic</span></span></div>
+                                        <div class="tech-chip"><img class="tech-logo" src="{{ url_for('static', filename='images/FLASK.png') }}" alt="Flask logo"><span class="tech-chip-body"><span class="tech-chip-name">Flask</span><span class="tech-chip-role">Routing and app server</span></span></div>
+                                        <div class="tech-chip"><img class="tech-logo" src="{{ url_for('static', filename='images/MongoDB.jpg') }}" alt="MongoDB logo"><span class="tech-chip-body"><span class="tech-chip-name">MongoDB</span><span class="tech-chip-role">Prediction storage</span></span></div>
+                                    </div>
+                                </section>
+                                <section class="sl-tech-group">
+                                    <h3 class="sl-tech-group-title">Computer Vision / AI</h3>
+                                    <div class="sl-tech-chips">
+                                        <div class="tech-chip"><img class="tech-logo" src="{{ url_for('static', filename='images/OPENCV.png') }}" alt="OpenCV logo"><span class="tech-chip-body"><span class="tech-chip-name">OpenCV</span><span class="tech-chip-role">Video frame processing</span></span></div>
+                                        <div class="tech-chip"><img class="tech-logo" src="{{ url_for('static', filename='images/MEDIAPIPE.jpeg') }}" alt="MediaPipe logo"><span class="tech-chip-body"><span class="tech-chip-name">MediaPipe</span><span class="tech-chip-role">Hand landmark detection</span></span></div>
+                                    </div>
+                                </section>
+                                <section class="sl-tech-group">
+                                    <h3 class="sl-tech-group-title">Speech / Interaction</h3>
+                                    <div class="sl-tech-chips">
+                                        <div class="tech-chip"><img class="tech-logo" src="{{ url_for('static', filename='images/WEBSPEECHAPI.png') }}" alt="Web Speech API logo"><span class="tech-chip-body"><span class="tech-chip-name">Web Speech API</span><span class="tech-chip-role">Speech integration</span></span></div>
+                                        <div class="tech-chip"><img class="tech-logo" src="{{ url_for('static', filename='images/SpeechSynthesis.png') }}" alt="SpeechSynthesis logo"><span class="tech-chip-body"><span class="tech-chip-name">SpeechSynthesis</span><span class="tech-chip-role">Voice playback</span></span></div>
+                                        <div class="tech-chip"><img class="tech-logo" src="{{ url_for('static', filename='images/MicrosoftLogo.png') }}" alt="Microsoft logo"><span class="tech-chip-body"><span class="tech-chip-name">Microsoft</span><span class="tech-chip-role">Voice ecosystem</span></span></div>
+                                    </div>
+                                </section>
+                                <section class="sl-tech-group">
+                                    <h3 class="sl-tech-group-title">Authentication / Security</h3>
+                                    <div class="sl-tech-chips">
+                                        <div class="tech-chip"><img class="tech-logo" src="{{ url_for('static', filename='images/OAUTH.png') }}" alt="OAuth Auth0 logo"><span class="tech-chip-body"><span class="tech-chip-name">OAuth / Auth0</span><span class="tech-chip-role">User authentication</span></span></div>
+                                    </div>
+                                </section>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ==================== FEATURES ==================== -->
+    <section class="sl-section sl-section-navy" id="features">
+        <div class="sl-container">
+            <h2 class="sl-section-title fade-up">Core Features</h2>
+            <p class="sl-section-subtitle fade-up fade-delay-1" data-scroll-reveal data-sr-blur="6" data-sr-opacity="0.05" data-sr-rotation="3">Built for accessibility, real-time detection, and ease of use.</p>
+            <div class="sl-cards-3">
+                <div class="sl-card fade-up fade-delay-1">
+                    <div class="sl-icon-circle">🖐️</div>
+                    <h3>Real-Time Detection</h3>
+                    <p>Detects and classifies ASL hand gestures live using a trained computer vision model and MediaPipe.</p>
+                </div>
+                <div class="sl-card fade-up fade-delay-2">
+                    <div class="sl-icon-circle">🔤</div>
+                    <h3>ASL Alphabet and Signs</h3>
+                    <p>Recognizes the full ASL alphabet A to Z and common phrases like Hello, Thank You, and I Love You.</p>
+                </div>
+                <div class="sl-card fade-up fade-delay-3">
+                    <div class="sl-icon-circle">🔊</div>
+                    <h3>Text-to-Speech</h3>
+                    <p>Converts translated text to spoken audio with a single click, improving communication accessibility.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ==================== PRACTICE / MAIN APP ==================== -->
+    <section class="sl-section sl-section-dark" id="practice">
+        <div class="sl-container">
+            <h2 class="sl-section-title fade-up">Live Sign Recognition</h2>
+            <p class="sl-section-subtitle fade-up fade-delay-1" data-scroll-reveal data-sr-blur="6" data-sr-opacity="0.05" data-sr-rotation="3">Position your hand in the camera frame and perform an ASL sign to see it detected in real time.</p>
+
+            <!-- Camera feed + Reference slides side by side -->
+            <div class="sl-app-grid">
+                <div class="sl-panel fade-up fade-delay-1">
+                    <h3>Live Camera Feed</h3>
+                    <div class="sl-video-wrap">
+                        <img id="cameraFeed" class="camera-feed" src="{{ url_for('video_feed') }}" alt="Live Camera Feed" />
+                    </div>
+                </div>
+
+                <div class="sl-panel fade-up fade-delay-2">
+                    <h3>ASL Reference</h3>
+                    <div id="aslReferenceCarousel" class="carousel slide asl-carousel" data-bs-interval="false" data-bs-ride="false">
+                        <div class="carousel-inner">
+                            <div class="carousel-item active">
+                                <img src="{{ url_for('static', filename='images/hand-signs-of-the-ASL-Language.png') }}" class="d-block w-100 asl-reference-img" alt="ASL Alphabet Chart">
+                            </div>
+                            <div class="carousel-item">
+                                <img src="{{ url_for('static', filename='images/sign language 2.jpg') }}" class="d-block w-100 asl-reference-img" alt="Common ASL Phrases Reference">
+                            </div>
+                        </div>
+                        <button class="carousel-control-prev asl-carousel-control" type="button" data-bs-target="#aslReferenceCarousel" data-bs-slide="prev">
+                            <span class="carousel-control-prev-icon" aria-hidden="true"></span>
+                            <span class="visually-hidden">Previous</span>
+                        </button>
+                        <button class="carousel-control-next asl-carousel-control" type="button" data-bs-target="#aslReferenceCarousel" data-bs-slide="next">
+                            <span class="carousel-control-next-icon" aria-hidden="true"></span>
+                            <span class="visually-hidden">Next</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Translation output panel -->
+            <div class="sl-output-panel fade-up fade-delay-3">
+                <h3>Translation Output</h3>
+                <div class="sl-field-label">Detected &amp; Translated Text</div>
+                <input
+                    type="text"
+                    id="translatedText"
+                    class="sl-text-input"
+                    placeholder="Translated text will appear here..."
+                    aria-label="Translated text"
+                    readonly
+                />
+                <div class="sl-controls-row">
+                    <button type="button" id="resetButton" class="sl-btn sl-btn-danger">Reset</button>
+                    <button type="button" id="speakButton" class="sl-btn sl-btn-primary">🔊 Speak</button>
+                    <button type="button" id="motionSpeechToggle" class="sl-btn sl-btn-outline">Motion-to-Speech: Off</button>
+                </div>
+                <div class="sl-voice-row">
+                    <span class="sl-voice-label">🎙 Voice</span>
+                    <select id="voiceSelect" class="sl-voice-select" aria-label="Select speech voice">
+                        <option value="">Loading voices...</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ==================== HOW IT WORKS ==================== -->
+    <section class="sl-section sl-section-navy" id="about">
+        <div class="sl-container">
+            <h2 class="sl-section-title fade-up">How It Works</h2>
+            <p class="sl-section-subtitle fade-up fade-delay-1" data-scroll-reveal data-sr-blur="6" data-sr-opacity="0.05" data-sr-rotation="3">Four steps from hand gesture to text and speech.</p>
+            <div class="sl-cards-4">
+                <div class="sl-card fade-up fade-delay-1">
+                    <div class="sl-step-number">1</div>
+                    <h3>Capture Gesture</h3>
+                    <p>The webcam captures your hand gesture in real time via the live video feed.</p>
+                </div>
+                <div class="sl-card fade-up fade-delay-2">
+                    <div class="sl-step-number">2</div>
+                    <h3>Detect Landmarks</h3>
+                    <p>MediaPipe extracts 21 hand landmark coordinates from each captured frame.</p>
+                </div>
+                <div class="sl-card fade-up fade-delay-3">
+                    <div class="sl-step-number">3</div>
+                    <h3>Classify Sign</h3>
+                    <p>A trained Random Forest model classifies the normalized landmarks into the corresponding ASL sign.</p>
+                </div>
+                <div class="sl-card fade-up fade-delay-4">
+                    <div class="sl-step-number">4</div>
+                    <h3>Output Text &amp; Speech</h3>
+                    <p>The recognized sign displays as text and can be spoken aloud via the Speak button.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ==================== TEAM ==================== -->
+    <section class="sl-section sl-section-mid" id="team">
+        <div class="sl-container">
+            <h2 class="sl-section-title fade-up">Meet the Team</h2>
+            <p class="sl-section-subtitle fade-up fade-delay-1"><span data-scroll-reveal data-sr-blur="6" data-sr-opacity="0.05" data-sr-rotation="3">Senior Capstone Project — Computer Science &amp; Engineering</span></p>
+            <div class="sl-team-grid">
+
+                <!-- TEAM MEMBER 1 — Ricardo Urbaez -->
+                <div class="sl-team-card fade-up fade-delay-1">
+                    <div class="team-avatar">
+                        <img src="{{ url_for('static', filename='images/team/Ricardo.jpeg') }}" alt="Ricardo Urbaez" class="team-photo">
+                    </div>
+                    <div class="sl-team-name">Ricardo Urbaez</div>
+                    <div class="sl-team-role">Lead AI Engineer</div>
+                    <a href="https://www.linkedin.com/in/ricardourbaez/" class="sl-linkedin-btn" target="_blank" rel="noopener noreferrer">
+                        <img src="https://upload.wikimedia.org/wikipedia/commons/c/ca/LinkedIn_logo_initials.png" alt="LinkedIn" class="sl-linkedin-icon" />
+                        LinkedIn
+                    </a>
+                </div>
+
+                <!-- TEAM MEMBER 2 — Felix Molina -->
+                <div class="sl-team-card fade-up fade-delay-2">
+                    <div class="team-avatar">
+                        <img src="{{ url_for('static', filename='images/team/Felix.jpeg') }}" alt="Felix Molina" class="team-photo">
+                    </div>
+                    <div class="sl-team-name">Felix Molina</div>
+                    <div class="sl-team-role">Co-Lead AI Engineer</div>
+                    <a href="https://www.linkedin.com/in/felix-molina-196550344/" class="sl-linkedin-btn" target="_blank" rel="noopener noreferrer">
+                        <img src="https://upload.wikimedia.org/wikipedia/commons/c/ca/LinkedIn_logo_initials.png" alt="LinkedIn" class="sl-linkedin-icon" />
+                        LinkedIn
+                    </a>
+                </div>
+
+                <!-- TEAM MEMBER 3 — Michael Niemeyer -->
+                <div class="sl-team-card fade-up fade-delay-3">
+                    <div class="team-avatar">
+                        <img src="{{ url_for('static', filename='images/team/Michael.jpeg') }}" alt="Michael Niemeyer" class="team-photo">
+                    </div>
+                    <div class="sl-team-name">Michael Niemeyer</div>
+                    <div class="sl-team-role">DB Administrator</div>
+                    <a href="https://www.linkedin.com/in/michael-niemeyer-b703ba275/" class="sl-linkedin-btn" target="_blank" rel="noopener noreferrer">
+                        <img src="https://upload.wikimedia.org/wikipedia/commons/c/ca/LinkedIn_logo_initials.png" alt="LinkedIn" class="sl-linkedin-icon" />
+                        LinkedIn
+                    </a>
+                </div>
+
+                <!-- TEAM MEMBER 4 — Nicole Bencosme Gil -->
+                <div class="sl-team-card fade-up fade-delay-4">
+                    <div class="team-avatar">
+                        <img src="{{ url_for('static', filename='images/team/Nicole.jpeg') }}" alt="Nicole Bencosme Gil" class="team-photo">
+                    </div>
+                    <div class="sl-team-name">Nicole Bencosme Gil</div>
+                    <div class="sl-team-role">Front End Developer</div>
+                    <a href="https://www.linkedin.com/in/nicole-bencosme-gil/" class="sl-linkedin-btn" target="_blank" rel="noopener noreferrer">
+                        <img src="https://upload.wikimedia.org/wikipedia/commons/c/ca/LinkedIn_logo_initials.png" alt="LinkedIn" class="sl-linkedin-icon" />
+                        LinkedIn
+                    </a>
+                </div>
+
+                <!-- TEAM MEMBER 5 — Naomi Joa (no photo yet) -->
+                <div class="sl-team-card fade-up fade-delay-4">
+                    <div class="team-avatar placeholder-avatar">
+                        <span>NJ</span>
+                    </div>
+                    <div class="sl-team-name">Naomi Joa</div>
+                    <div class="sl-team-role">Front End Developer</div>
+                    <span class="sl-linkedin-btn sl-linkedin-soon">
+                        <img src="https://upload.wikimedia.org/wikipedia/commons/c/ca/LinkedIn_logo_initials.png" alt="LinkedIn" class="sl-linkedin-icon" />
+                        LinkedIn Coming Soon
+                    </span>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ==================== FOOTER ==================== -->
+    <footer class="sl-footer">
+        <div class="sl-container">
+            <div class="sl-footer-grid">
+                <div>
+                    <div class="sl-footer-logo">Sign<span>Lingo</span></div>
+                    <p class="sl-footer-text">
+                        A senior capstone computer vision accessibility tool for real-time
+                        ASL hand gesture recognition and text translation.
+                    </p>
+                </div>
+                <div>
+                    <div class="sl-footer-col-title">Quick Links</div>
+                    <div class="sl-footer-links">
+                        <a href="#home">Home</a>
+                        <a href="#features">Features</a>
+                        <a href="#practice">Practice</a>
+                        <a href="#team">Team</a>
+                        <a href="#about">How It Works</a>
+                    </div>
+                </div>
+                <div>
+                    <div class="sl-footer-col-title">Project</div>
+                    <div class="sl-footer-links">
+                        <span>Repository link available in the published capstone repo</span>
+                        <a href="#practice">Live Demo</a>
+                    </div>
+                </div>
+            </div>
+            <div class="sl-footer-bottom">
+                &copy; 2026 SignLingo. All rights reserved. &nbsp;&bull;&nbsp; Senior Capstone Project.
+            </div>
+        </div>
+    </footer>
+
+    <!-- Bootstrap JS (carousel) -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0/dist/js/bootstrap.bundle.min.js"></script>
+
+    <!-- Socket.IO -->
+    <script src="https://cdn.socket.io/4.0.1/socket.io.min.js"></script>
+
+    <script>
+        // Disable auto-cycling on ASL reference carousel
+        var carouselEl = document.getElementById('aslReferenceCarousel');
+        var carousel = new bootstrap.Carousel(carouselEl, { interval: false, wrap: true });
+
+        // ---- Socket.IO — receive ASL prediction from backend ----
+        const socket = io();
+
+        // ---- Motion-to-Speech state ----
+        let motionSpeechEnabled = false;
+        let lastSpokenText = '';
+        let lastSpokenTime = 0;
+        let activeUtterance = null;
+        const SPEECH_COOLDOWN_MS = 1500;
+
+        // ---- Voice selector population (English only, friendly names) ----
+        let availableVoices = [];
+
+        function getSimpleVoiceName(voice) {
+            const n = voice.name.toLowerCase();
+
+            // Microsoft voices (offline)
+            if (n.includes('david'))   return '🔵 Microsoft David — Male, American';
+            if (n.includes('mark'))    return '🔵 Microsoft Mark — Male, American';
+            if (n.includes('zira'))    return '🟣 Microsoft Zira — Female, American';
+
+            // Google voices (require internet)
+            if (n.includes('google uk english female'))   return '🟣 Google UK English — Female, British (Requires Internet)';
+            if (n.includes('google uk english male'))     return '🔵 Google UK English — Male, British (Requires Internet)';
+            if (n.includes('google uk'))                  return '🔵 Google UK English — British (Requires Internet)';
+            if (n.includes('google us english'))          return '🔵 Google US English — Neutral, American (Requires Internet)';
+            if (n.includes('google us'))                  return '🔵 Google US English — American (Requires Internet)';
+            if (n.includes('google') && n.includes('female'))  return '🟣 Google — Female (Requires Internet)';
+            if (n.includes('google') && n.includes('male'))    return '🔵 Google — Male (Requires Internet)';
+            if (n.includes('google'))                     return '🔵 Google English (Requires Internet)';
+
+            // Generic fallback
+            if (n.includes('female'))  return '🟣 Female Voice';
+            if (n.includes('male'))    return '🔵 Male Voice';
+            return '🎙️ ' + voice.name;
+        }
+
+        function loadVoices() {
+            const select = document.getElementById('voiceSelect');
+            const all = speechSynthesis.getVoices();
+            if (!all.length) return;
+
+            const enUS = all.filter(v => v.lang && v.lang.toLowerCase() === 'en-us');
+            const enAll = all.filter(v => v.lang && v.lang.toLowerCase().startsWith('en'));
+            const pool = enUS.length > 0 ? enUS : enAll;
+            if (!pool.length) {
+                availableVoices = [all[0]];
+            } else {
+                availableVoices = pool;
+            }
+
+            const prevIdx = parseInt(select.value, 10);
+            select.innerHTML = '';
+            availableVoices.forEach(function (v, i) {
+                const opt = document.createElement('option');
+                opt.value = i;
+                opt.textContent = getSimpleVoiceName(v);
+                select.appendChild(opt);
+            });
+
+            // Restore previous index if valid, else prefer Google US English
+            if (!isNaN(prevIdx) && prevIdx < availableVoices.length) {
+                select.value = prevIdx;
+            } else {
+                const preferred = availableVoices.findIndex(v => v.name === 'Google US English');
+                select.value = preferred >= 0 ? preferred : 0;
+            }
+        }
+        loadVoices();
+        speechSynthesis.addEventListener('voiceschanged', loadVoices);
+
+        function getSelectedVoice() {
+            const idx = parseInt(document.getElementById('voiceSelect').value, 10);
+            if (Number.isNaN(idx) || idx < 0 || idx >= availableVoices.length) {
+                return null;
+            }
+            return availableVoices[idx];
+        }
+
+        function normalizeSpeechText(text) {
+            return (text || '').trim();
+        }
+
+        function isBlockedSpeechText(text) {
+            const normalized = normalizeSpeechText(text).toLowerCase();
+            return normalized === '' || normalized === 'uncertain' || normalized === 'processing';
+        }
+
+        function speakDetectedText(text) {
+            if (!motionSpeechEnabled || isBlockedSpeechText(text)) return;
+            const selectedVoice = getSelectedVoice();
+            if (!selectedVoice) return;
+            window.speechSynthesis.cancel();
+            activeUtterance = null;
+
+            const utterance = new SpeechSynthesisUtterance(normalizeSpeechText(text));
+            utterance.voice = selectedVoice;
+            utterance.rate = 0.95;
+            utterance.pitch = 1;
+            utterance.volume = 1;
+            utterance.onstart = function () {
+                activeUtterance = utterance;
+            };
+            utterance.onend = function () {
+                if (activeUtterance === utterance) {
+                    activeUtterance = null;
+                }
+            };
+            utterance.onerror = function () {
+                if (activeUtterance === utterance) {
+                    activeUtterance = null;
+                }
+            };
+            window.speechSynthesis.speak(utterance);
+        }
+
+        socket.on('prediction', function (data) {
+            const isProcessing = !data.text || data.text === 'Processing' || data.text === 'Uncertain';
+            const detectedText = isProcessing ? '' : data.text;
+            document.getElementById('translatedText').value = detectedText;
+            var heroLetter = document.getElementById('heroLetter');
+            if (heroLetter) {
+                heroLetter.textContent = isProcessing ? '?' : data.text.charAt(0).toUpperCase();
+            }
+
+            const now = Date.now();
+            if (
+                motionSpeechEnabled &&
+                !isProcessing &&
+                detectedText &&
+                detectedText !== lastSpokenText &&
+                now - lastSpokenTime > SPEECH_COOLDOWN_MS
+            ) {
+                speakDetectedText(detectedText);
+                lastSpokenText = detectedText;
+                lastSpokenTime = now;
+            }
+        });
+
+        // ---- Motion-to-Speech toggle ----
+        document.getElementById('motionSpeechToggle').addEventListener('click', function () {
+            motionSpeechEnabled = !motionSpeechEnabled;
+            this.textContent = motionSpeechEnabled ? 'Motion-to-Speech: On' : 'Motion-to-Speech: Off';
+            this.classList.toggle('active', motionSpeechEnabled);
+            if (!motionSpeechEnabled) {
+                activeUtterance = null;
+                window.speechSynthesis.cancel();
+            }
+        });
+
+        document.getElementById('voiceSelect').addEventListener('change', function () {
+            activeUtterance = null;
+            window.speechSynthesis.cancel();
+        });
+
+        // ---- Reset button ----
+        document.getElementById('resetButton').addEventListener('click', function () {
+            document.getElementById('translatedText').value = '';
+            var heroLetter = document.getElementById('heroLetter');
+            if (heroLetter) {
+                heroLetter.textContent = '-';
+            }
+            lastSpokenText = '';
+            activeUtterance = null;
+            window.speechSynthesis.cancel();
+        });
+
+        // ---- Speak button ----
+        document.getElementById('speakButton').addEventListener('click', function () {
+            if (!motionSpeechEnabled) return;
+            const text = document.getElementById('translatedText').value;
+            speakDetectedText(text);
+        });
+
+    </script>
+
+    <script>
+        /* ================================================
+           SCROLL-REVEAL — IntersectionObserver (.reveal)
+        ================================================ */
+        (function () {
+            const observer = new IntersectionObserver(
+                function (entries) {
+                    entries.forEach(function (entry) {
+                        if (entry.isIntersecting) {
+                            entry.target.classList.add('visible');
+                            observer.unobserve(entry.target);
+                        }
+                    });
+                },
+                { threshold: 0.12 }
+            );
+            document.querySelectorAll('.reveal').forEach(function (el) {
+                observer.observe(el);
+            });
+        })();
+
+        /* ================================================
+           SCROLLREVEAL — GSAP word-by-word port of React Bits
+           Props via data attributes on the inner <span>:
+             data-scroll-reveal   — enable
+             data-sr-opacity      — baseOpacity (default 0.1)
+             data-sr-blur         — blurStrength px (default 4)
+             data-sr-rotation     — baseRotation deg (default 3)
+        ================================================ */
+        (function () {
+            if (typeof gsap === 'undefined' || typeof ScrollTrigger === 'undefined') return;
+            gsap.registerPlugin(ScrollTrigger);
+
+            document.querySelectorAll('[data-scroll-reveal]').forEach(function (span) {
+                var baseOpacity  = parseFloat(span.dataset.srOpacity  || '0.1');
+                var blurStrength = parseFloat(span.dataset.srBlur      || '4');
+                var baseRotation = parseFloat(span.dataset.srRotation  || '3');
+                var enableBlur   = blurStrength > 0;
+
+                // Wrap element in a .scroll-reveal-container div
+                var container = document.createElement('span');
+                container.className = 'scroll-reveal-container';
+
+                var textEl = document.createElement('span');
+                textEl.className = 'scroll-reveal-text';
+
+                // Split into word spans, preserve whitespace between words
+                var raw = span.textContent;
+                span.textContent = '';
+                raw.split(/(\s+)/).forEach(function (chunk) {
+                    if (/^\s+$/.test(chunk)) {
+                        textEl.appendChild(document.createTextNode(chunk));
+                    } else {
+                        var word = document.createElement('span');
+                        word.className = 'sr-word';
+                        word.textContent = chunk;
+                        textEl.appendChild(word);
+                    }
+                });
+
+                container.appendChild(textEl);
+                span.appendChild(container);
+
+                var words = textEl.querySelectorAll('.sr-word');
+
+                // Container rotation tween
+                gsap.fromTo(container,
+                    { transformOrigin: '0% 50%', rotate: baseRotation },
+                    {
+                        ease: 'none',
+                        rotate: 0,
+                        scrollTrigger: {
+                            trigger: container,
+                            start: 'top bottom',
+                            end: 'bottom bottom',
+                            scrub: true
+                        }
+                    }
+                );
+
+                // Word opacity tween
+                gsap.fromTo(words,
+                    { opacity: baseOpacity },
+                    {
+                        ease: 'none',
+                        opacity: 1,
+                        stagger: 0.05,
+                        scrollTrigger: {
+                            trigger: container,
+                            start: 'top bottom-=20%',
+                            end: 'bottom bottom',
+                            scrub: true
+                        }
+                    }
+                );
+
+                // Word blur tween
+                if (enableBlur) {
+                    gsap.fromTo(words,
+                        { filter: 'blur(' + blurStrength + 'px)' },
+                        {
+                            ease: 'none',
+                            filter: 'blur(0px)',
+                            stagger: 0.05,
+                            scrollTrigger: {
+                                trigger: container,
+                                start: 'top bottom-=20%',
+                                end: 'bottom bottom',
+                                scrub: true
+                            }
+                        }
+                    );
+                }
+            });
+        })();
+
+        /* ================================================
+           CLICKSPARK — Vanilla JS Canvas Port
+        ================================================ */
+        (function () {
+            var cfg = {
+                color:    '#60a5fa',
+                count:    8,
+                size:     14,
+                radius:   48,
+                duration: 520
+            };
+
+            var canvas = document.createElement('canvas');
+            canvas.id = 'sparkCanvas';
+            canvas.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:9999;';
+            document.body.appendChild(canvas);
+
+            var ctx = canvas.getContext('2d');
+            var sparks = [];
+
+            function resize() {
+                canvas.width  = window.innerWidth;
+                canvas.height = window.innerHeight;
+            }
+            resize();
+            window.addEventListener('resize', resize);
+
+            document.addEventListener('click', function (e) {
+                var t = performance.now();
+                for (var i = 0; i < cfg.count; i++) {
+                    sparks.push({
+                        x: e.clientX,
+                        y: e.clientY,
+                        angle: (2 * Math.PI * i) / cfg.count,
+                        start: t
+                    });
+                }
+            });
+
+            function easeOut(t) { return t * (2 - t); }
+
+            function draw(ts) {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                for (var i = sparks.length - 1; i >= 0; i--) {
+                    var s = sparks[i];
+                    var elapsed = ts - s.start;
+                    if (elapsed >= cfg.duration) { sparks.splice(i, 1); continue; }
+                    var p  = elapsed / cfg.duration;
+                    var ep = easeOut(p);
+                    var d  = ep * cfg.radius;
+                    var ll = cfg.size * (1 - ep);
+                    var x1 = s.x + d * Math.cos(s.angle);
+                    var y1 = s.y + d * Math.sin(s.angle);
+                    var x2 = s.x + (d + ll) * Math.cos(s.angle);
+                    var y2 = s.y + (d + ll) * Math.sin(s.angle);
+                    ctx.strokeStyle     = cfg.color;
+                    ctx.lineWidth       = 2.2;
+                    ctx.globalAlpha     = 1 - p;
+                    ctx.lineCap         = 'round';
+                    ctx.beginPath();
+                    ctx.moveTo(x1, y1);
+                    ctx.lineTo(x2, y2);
+                    ctx.stroke();
+                }
+                ctx.globalAlpha = 1;
+                requestAnimationFrame(draw);
+            }
+            requestAnimationFrame(draw);
+        })();
+
+        /* ================================================
+           SHINYTEXT — vanilla JS port of React Bits component
+           Props: el, color, shineColor, speed, delay,
+                  spread, direction, yoyo, pauseOnHover
+        ================================================ */
+        (function () {
+            function ShinyText(el, opts) {
+                if (!el) return;
+                opts = Object.assign({
+                    color:        '#b5b5b5',
+                    shineColor:   '#ffffff',
+                    speed:        2,
+                    delay:        0,
+                    spread:       120,
+                    direction:    'left',
+                    yoyo:         false,
+                    pauseOnHover: false
+                }, opts || {});
+
+                el.classList.add('shiny-text');
+
+                var animDuration  = opts.speed * 1000;
+                var delayDuration = opts.delay  * 1000;
+                var dir           = opts.direction === 'left' ? 1 : -1;
+                var elapsed       = 0;
+                var lastTime      = null;
+                var rafId         = null;
+
+                // Build gradient string
+                var grad = 'linear-gradient(' + opts.spread + 'deg, ' +
+                    opts.color + ' 0%, ' +
+                    opts.color + ' 35%, ' +
+                    opts.shineColor + ' 50%, ' +
+                    opts.color + ' 65%, ' +
+                    opts.color + ' 100%)';
+
+                el.style.backgroundImage = grad;
+                el.style.backgroundSize  = '200% auto';
+
+                function setPosition(p) {
+                    // p 0→100: shine sweeps across
+                    // backgroundPosition 150%→ -50% (mirrors React version)
+                    el.style.backgroundPosition = (150 - p * 2) + '% center';
+                }
+
+                function tick(ts) {
+                    if (el.dataset.paused === 'true') {
+                        lastTime = null;
+                        rafId = requestAnimationFrame(tick);
+                        return;
+                    }
+                    if (lastTime === null) { lastTime = ts; rafId = requestAnimationFrame(tick); return; }
+
+                    var delta = ts - lastTime;
+                    lastTime  = ts;
+                    elapsed  += delta;
+
+                    var p;
+                    if (opts.yoyo) {
+                        var cycleDur  = animDuration + delayDuration;
+                        var fullCycle = cycleDur * 2;
+                        var ct        = elapsed % fullCycle;
+                        if (ct < animDuration) {
+                            p = (ct / animDuration) * 100;
+                        } else if (ct < cycleDur) {
+                            p = 100;
+                        } else if (ct < cycleDur + animDuration) {
+                            p = 100 - ((ct - cycleDur) / animDuration) * 100;
+                        } else {
+                            p = 0;
+                        }
+                        if (dir === -1) p = 100 - p;
+                    } else {
+                        var cycleDur2 = animDuration + delayDuration;
+                        var ct2       = elapsed % cycleDur2;
+                        if (ct2 < animDuration) {
+                            p = (ct2 / animDuration) * 100;
+                        } else {
+                            p = dir === 1 ? 100 : 0;
+                        }
+                        if (dir === -1 && ct2 < animDuration) p = 100 - p;
+                    }
+
+                    setPosition(p);
+                    rafId = requestAnimationFrame(tick);
+                }
+
+                if (opts.pauseOnHover) {
+                    el.addEventListener('mouseenter', function () { el.dataset.paused = 'true';  });
+                    el.addEventListener('mouseleave', function () { el.dataset.paused = 'false'; });
+                }
+
+                setPosition(0);
+                rafId = requestAnimationFrame(tick);
+            }
+
+            // Apply to brand "Lingo" span
+            ShinyText(document.getElementById('brandShiny'), {
+                color:      '#60a5fa',
+                shineColor: '#ffffff',
+                speed:      2.5,
+                spread:     120,
+                direction:  'left'
+            });
+
+            // Apply to hero subtitle
+            ShinyText(document.getElementById('heroSubtitleShiny'), {
+                color:        '#60a5fa',
+                shineColor:   '#c4b5fd',
+                speed:        3,
+                delay:        0.4,
+                spread:       100,
+                direction:    'left',
+                pauseOnHover: true
+            });
+        })();
+
+    </script>
+
+    <!-- Click sound effect (must be before the click-sound script) -->
+    <audio id="clickSound" preload="auto">
+        <source src="{{ url_for('static', filename='audio/mixkit-select-click-1109.wav') }}" type="audio/wav">
+    </audio>
+
+    <script>
+        (function () {
+            var clickSound = document.getElementById("clickSound");
+            console.log("Click sound init. Audio element:", clickSound);
+
+            function playClickSound() {
+                if (!clickSound) return;
+                try {
+                    clickSound.pause();
+                    clickSound.currentTime = 0;
+                    clickSound.volume = 0.8;
+                    var p = clickSound.play();
+                    if (p !== undefined) {
+                        p.catch(function (err) {
+                            console.log("Click sound blocked or failed:", err);
+                        });
+                    }
+                } catch (err) {
+                    console.log("Click sound error:", err);
+                }
+            }
+
+            document.querySelectorAll(
+                "button, .sl-btn, .sl-linkedin-btn, .asl-carousel-control, .sl-nav-links a, a[href], [role='button']"
+            ).forEach(function (el) {
+                el.addEventListener("click", playClickSound);
+            });
+        })();
+    </script>
+
+</body>
+
+</html>

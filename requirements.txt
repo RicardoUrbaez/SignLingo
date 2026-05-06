@@ -1,0 +1,10 @@
+flask
+flask-socketio
+opencv-python
+mediapipe
+scikit-learn
+numpy
+pymongo[srv]
+python-dotenv
+Authlib
+requests

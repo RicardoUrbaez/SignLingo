@@ -1,0 +1,554 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <title>SignLingo Sign In</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <style>
+        :root {
+            --text-main: #f8fafc;
+            --text-muted: rgba(226, 232, 240, 0.78);
+            --text-soft: rgba(191, 219, 254, 0.72);
+            --blue: #3b82f6;
+            --blue-deep: #1d4ed8;
+            --border: rgba(148, 163, 184, 0.22);
+            --shadow-glow: 0 24px 80px rgba(37, 99, 235, 0.2);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            min-height: 100vh;
+            padding: 0;
+            font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+            color: var(--text-main);
+            overflow: hidden;
+        }
+
+        .login-hero-page {
+            position: relative;
+            min-height: 100vh;
+            width: 100%;
+            display: grid;
+            place-items: center;
+            overflow: hidden;
+            isolation: isolate;
+            padding: clamp(20px, 4vw, 44px);
+            background:
+                radial-gradient(circle at 50% 35%, rgba(37, 99, 235, 0.18), transparent 38%),
+                radial-gradient(circle at 10% 80%, rgba(59, 130, 246, 0.12), transparent 35%),
+                radial-gradient(circle at 85% 15%, rgba(96, 165, 250, 0.1), transparent 28%),
+                linear-gradient(135deg, #020617 0%, #071a35 48%, #020617 100%);
+        }
+
+        .login-background-glow {
+            position: relative;
+            z-index: 1;
+            position: absolute;
+            inset: 0;
+            pointer-events: none;
+        }
+
+        .login-background-glow::before,
+        .login-background-glow::after {
+            content: "";
+            position: absolute;
+            border-radius: 999px;
+            filter: blur(60px);
+            opacity: 0.8;
+        }
+
+        .login-background-glow::before {
+            width: min(42vw, 520px);
+            height: min(42vw, 520px);
+            left: 50%;
+            top: 46%;
+            transform: translate(-50%, -50%);
+            background: radial-gradient(circle, rgba(59, 130, 246, 0.22), rgba(59, 130, 246, 0));
+        }
+
+        .login-background-glow::after {
+            width: min(30vw, 360px);
+            height: min(30vw, 360px);
+            right: 12%;
+            top: 18%;
+            background: radial-gradient(circle, rgba(96, 165, 250, 0.18), rgba(96, 165, 250, 0));
+        }
+
+        .login-hero-content {
+            position: relative;
+            z-index: 5;
+            width: min(92vw, 820px);
+            text-align: center;
+            padding: clamp(32px, 5vw, 70px);
+            animation: heroFadeUp 0.9s ease both;
+        }
+
+        .login-hero-content::before {
+            content: "";
+            position: absolute;
+            inset: clamp(12px, 2vw, 22px);
+            border-radius: 40px;
+            background: linear-gradient(180deg, rgba(15, 23, 42, 0.22), rgba(15, 23, 42, 0.08));
+            border: 1px solid rgba(148, 163, 184, 0.08);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+            z-index: -1;
+        }
+
+        .login-logo-row {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 18px;
+            margin-bottom: 18px;
+            flex-wrap: wrap;
+        }
+
+        .login-logo {
+            width: clamp(70px, 8vw, 110px);
+            height: clamp(70px, 8vw, 110px);
+            object-fit: contain;
+            border-radius: 22px;
+            background: rgba(255, 255, 255, 0.92);
+            padding: 8px;
+            box-shadow: 0 20px 60px rgba(59, 130, 246, 0.25);
+        }
+
+        .login-title {
+            font-size: clamp(4rem, 9vw, 8rem);
+            line-height: 1.04;
+            font-weight: 900;
+            letter-spacing: -0.08em;
+            margin: 0;
+            padding-bottom: 0.14em;
+            overflow: visible;
+            text-shadow: 0 20px 70px rgba(59, 130, 246, 0.28);
+        }
+
+        .login-subtitle {
+            margin-top: 20px;
+            font-size: clamp(1.2rem, 2vw, 2rem);
+            font-weight: 800;
+            color: #bfdbfe;
+        }
+
+        .shiny-text {
+            display: inline-block;
+            --shiny-color: #b5b5b5;
+            --shiny-shine-color: #ffffff;
+            --shiny-speed: 2s;
+            --shiny-spread: 120deg;
+            background-image: linear-gradient(
+                var(--shiny-spread),
+                var(--shiny-color) 0%,
+                var(--shiny-color) 35%,
+                var(--shiny-shine-color) 50%,
+                var(--shiny-color) 65%,
+                var(--shiny-color) 100%
+            );
+            background-size: 200% auto;
+            background-position: 150% center;
+            background-clip: text;
+            -webkit-background-clip: text;
+            color: transparent;
+            -webkit-text-fill-color: transparent;
+            animation: shinySweep var(--shiny-speed) linear infinite;
+        }
+
+        .shiny-text.title-shine {
+            --shiny-color: #dbeafe;
+            --shiny-shine-color: #ffffff;
+            --shiny-speed: 3.2s;
+            --shiny-spread: 108deg;
+        }
+
+        .metallic-title {
+            display: inline-block;
+            padding-bottom: 0.08em;
+            overflow: visible;
+            background-image:
+                linear-gradient(
+                    112deg,
+                    #0f172a 0%,
+                    #e2e8f0 14%,
+                    #94a3b8 24%,
+                    #f8fafc 34%,
+                    #64748b 46%,
+                    #ffffff 56%,
+                    #475569 68%,
+                    #e2e8f0 80%,
+                    #0f172a 100%
+                ),
+                linear-gradient(
+                    90deg,
+                    rgba(255, 255, 255, 0) 0%,
+                    rgba(255, 255, 255, 0.9) 42%,
+                    rgba(255, 255, 255, 0.12) 52%,
+                    rgba(255, 255, 255, 0) 64%
+                );
+            background-size: 170% 100%, 220% 100%;
+            background-position: 50% 50%, 150% 50%;
+            background-blend-mode: screen;
+            background-clip: text;
+            -webkit-background-clip: text;
+            color: transparent;
+            -webkit-text-fill-color: transparent;
+            filter: drop-shadow(0 10px 30px rgba(148, 163, 184, 0.16));
+            animation: metallicSweep 4.8s ease-in-out infinite;
+        }
+
+        .shiny-text.subtitle-shine {
+            --shiny-color: #60a5fa;
+            --shiny-shine-color: #eff6ff;
+            --shiny-speed: 2.6s;
+            --shiny-spread: 120deg;
+        }
+
+        .login-description {
+            max-width: 680px;
+            margin: 24px auto 0;
+            color: var(--text-muted);
+            font-size: clamp(1rem, 1.4vw, 1.25rem);
+            line-height: 1.8;
+        }
+
+        .login-mission {
+            max-width: 650px;
+            margin: 14px auto 0;
+            color: var(--text-soft);
+            font-size: 1rem;
+            line-height: 1.6;
+        }
+
+        .login-actions {
+            margin-top: 36px;
+            display: flex;
+            justify-content: center;
+            gap: 16px;
+            flex-wrap: wrap;
+        }
+
+        .login-action-primary,
+        .login-action-secondary {
+            display: inline-flex;
+            justify-content: center;
+            align-items: center;
+            min-width: 190px;
+            padding: 16px 28px;
+            border-radius: 18px;
+            color: #ffffff;
+            text-decoration: none;
+            font-weight: 900;
+            letter-spacing: -0.01em;
+            transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease, background 0.2s ease;
+        }
+
+        .login-action-primary {
+            background: linear-gradient(135deg, var(--blue), var(--blue-deep));
+            box-shadow: 0 22px 55px rgba(37, 99, 235, 0.35);
+        }
+
+        .login-action-secondary {
+            background: rgba(15, 23, 42, 0.44);
+            border: 1px solid rgba(148, 163, 184, 0.28);
+            backdrop-filter: blur(14px);
+            -webkit-backdrop-filter: blur(14px);
+        }
+
+        .login-action-primary:hover,
+        .login-action-secondary:hover {
+            transform: translateY(-3px);
+        }
+
+        .login-action-primary:hover {
+            box-shadow: 0 28px 66px rgba(37, 99, 235, 0.42);
+        }
+
+        .login-action-secondary:hover {
+            border-color: rgba(147, 197, 253, 0.5);
+            box-shadow: 0 18px 40px rgba(2, 6, 23, 0.24);
+        }
+
+        .login-art {
+            position: absolute;
+            z-index: 1;
+            pointer-events: none;
+            opacity: 0;
+            animation: loginArtFade 0.9s ease forwards;
+            will-change: transform, opacity;
+        }
+
+        .login-art img {
+            width: 100%;
+            height: auto;
+            display: block;
+            object-fit: contain;
+            opacity: 1;
+            filter: drop-shadow(0 24px 50px rgba(59, 130, 246, 0.2));
+            animation: loginFloat 5.4s ease-in-out infinite;
+        }
+
+        .done-art {
+            right: 0;
+            bottom: 0;
+            width: clamp(180px, 18vw, 320px);
+            transform: translate(8%, 8%);
+            opacity: 0.95;
+            animation-delay: 0.25s;
+        }
+
+        .done-art img {
+            animation-delay: 0.3s;
+        }
+
+        .right-love-art {
+            left: 0;
+            top: 24%;
+            width: clamp(166px, 16vw, 278px);
+            transform: translate(-10%, -50%);
+            opacity: 0.92;
+            animation-delay: 0.35s;
+        }
+
+        .right-love-art img {
+            opacity: 1;
+            animation-delay: 0.6s;
+        }
+
+        .i-love-you-art {
+            left: 0;
+            bottom: 0;
+            width: clamp(220px, 20vw, 380px);
+            transform: translate(-8%, 10%);
+            opacity: 0.95;
+            animation-delay: 0.15s;
+        }
+
+        .i-love-you-art img {
+            animation-delay: 0.15s;
+        }
+
+        .python-art {
+            top: 12%;
+            right: 4%;
+            width: clamp(112px, 11vw, 205px);
+            transform: translate(0, 0);
+            opacity: 0.72;
+            animation-delay: 0.2s;
+        }
+
+        .python-art img {
+            opacity: 0.72;
+            filter: drop-shadow(0 18px 36px rgba(59, 130, 246, 0.2));
+            animation-delay: 0.45s;
+        }
+
+        @keyframes heroFadeUp {
+            from {
+                opacity: 0;
+                transform: translateY(22px) scale(0.98);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0) scale(1);
+            }
+        }
+
+        @keyframes shinySweep {
+            from {
+                background-position: 150% center;
+            }
+            to {
+                background-position: -50% center;
+            }
+        }
+
+        @keyframes metallicSweep {
+            0%, 100% {
+                background-position: 42% 50%, 150% 50%;
+                filter: drop-shadow(0 10px 30px rgba(148, 163, 184, 0.12));
+            }
+            50% {
+                background-position: 58% 50%, -40% 50%;
+                filter: drop-shadow(0 14px 38px rgba(248, 250, 252, 0.18));
+            }
+        }
+
+        @keyframes loginArtFade {
+            from {
+                opacity: 0;
+            }
+            to {
+                opacity: 1;
+            }
+        }
+
+        @keyframes loginFloat {
+            0%, 100% {
+                transform: translateY(0);
+            }
+            50% {
+                transform: translateY(-10px);
+            }
+        }
+
+        @media (max-width: 1024px) {
+            .done-art {
+                width: clamp(170px, 18vw, 260px);
+            }
+
+            .right-love-art {
+                width: clamp(152px, 16vw, 226px);
+            }
+
+            .i-love-you-art {
+                width: clamp(190px, 20vw, 300px);
+            }
+
+            .python-art {
+                width: clamp(102px, 11vw, 172px);
+                top: 13%;
+                right: 6%;
+            }
+        }
+
+        @media (max-width: 900px) {
+            .done-art {
+                width: 180px;
+                transform: translate(6%, 6%);
+            }
+
+            .right-love-art {
+                width: 152px;
+                top: 22%;
+                transform: translate(-8%, -50%);
+            }
+
+            .i-love-you-art {
+                width: 200px;
+                transform: translate(-6%, 8%);
+            }
+
+            .python-art {
+                width: 118px;
+                top: 15%;
+                right: 6%;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .login-hero-page {
+                padding: 20px;
+            }
+
+            .login-hero-content {
+                padding: 28px 18px 34px;
+            }
+
+            .login-hero-content::before {
+                inset: 0;
+            }
+
+            .login-logo-row {
+                gap: 14px;
+            }
+        }
+
+        @media (max-width: 640px) {
+            .done-art,
+            .right-love-art,
+            .i-love-you-art,
+            .python-art {
+                opacity: 0.22;
+            }
+
+            .done-art {
+                width: 120px;
+            }
+
+            .right-love-art {
+                width: 120px;
+            }
+
+            .i-love-you-art {
+                width: 140px;
+            }
+
+            .python-art {
+                width: 82px;
+            }
+
+            .login-actions {
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            .login-action-primary,
+            .login-action-secondary {
+                min-width: 0;
+                width: min(100%, 320px);
+                margin: 0 auto;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .login-hero-page {
+                padding: 16px;
+            }
+
+            .login-title {
+                font-size: clamp(3.2rem, 17vw, 4.4rem);
+            }
+
+            .right-love-art,
+            .python-art {
+                display: none;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <main class="login-hero-page">
+        <div class="login-background-glow"></div>
+
+        <div class="login-art python-art">
+            <img src="{{ url_for('static', filename='images/3D Python.png') }}" alt="" aria-hidden="true">
+        </div>
+
+        <div class="login-art i-love-you-art">
+            <img src="{{ url_for('static', filename='images/I_LOVE_YOU ( BOTTOM LEFT SIDE ).png') }}" alt="" aria-hidden="true">
+        </div>
+
+        <div class="login-art done-art">
+            <img src="{{ url_for('static', filename='images/DONE ( RIGHT SIDE).png') }}" alt="" aria-hidden="true">
+        </div>
+
+        <div class="login-art right-love-art">
+            <img src="{{ url_for('static', filename='images/RIGHT SIDE LOVE.webp') }}" alt="" aria-hidden="true">
+        </div>
+
+        <section class="login-hero-content">
+            <div class="login-logo-row">
+                <img class="login-logo" src="{{ url_for('static', filename='images/KULOGO.jpeg') }}" alt="KU Logo" />
+            </div>
+            <h1 class="login-title"><span class="metallic-title">SignLingo</span></h1>
+            <p class="login-subtitle"><span class="shiny-text subtitle-shine">Real-Time Sign Language to Text</span></p>
+            <p class="login-description">SignLingo uses computer vision and machine learning to recognize ASL gestures and translate them into readable English output in real time.</p>
+            <p class="login-mission">Built to reduce communication barriers and support sign language learning through instant visual feedback.</p>
+            <div class="login-actions">
+                <a class="login-action-primary" href="{{ url_for('login') }}">Login</a>
+                <a class="login-action-secondary" href="{{ url_for('signup') }}">Sign Up</a>
+            </div>
+        </section>
+    </main>
+</body>
+
+</html>

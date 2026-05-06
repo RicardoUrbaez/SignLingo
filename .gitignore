@@ -1,0 +1,13 @@
+.env
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.vscode/
+.pytest_cache/
+.mypy_cache/
+.coverage
+Thumbs.db
+archive/needs_review/backups/
+*_old.p
+*_old.pickle
