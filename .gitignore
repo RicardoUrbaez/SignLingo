@@ -1,13 +1,38 @@
+# Secrets
 .env
+
+# Python cache
 __pycache__/
 *.py[cod]
+
+# Virtual environments
 .venv/
 venv/
-.vscode/
+
+# Test/cache files
 .pytest_cache/
 .mypy_cache/
 .coverage
+
+# VS Code local settings
+.vscode/
+
+# Windows/macOS files
 Thumbs.db
-archive/needs_review/backups/
+.DS_Store
+
+# Archive and old backups
+archive/
 *_old.p
 *_old.pickle
+
+# Ignore dataset contents but keep folder placeholders
+data/raw/*
+!data/raw/.gitkeep
+
+data/processed/*
+!data/processed/.gitkeep
+
+# Old model backups
+models/*_old.p
+models/*_old.pickle
