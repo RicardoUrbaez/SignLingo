@@ -75,12 +75,13 @@ This project was adapted and modified for academic use. Some starter computer vi
 
 A short demo video is included to show the SignLingo interface, live camera feed, ASL reference panel, and recognition workflow.
 
+https://github.com/user-attachments/assets/ab95413e-766e-43af-b9dd-b21a108880bf
+
 <p align="center">
   <a href="docs/media/signlingo-demo.mp4">
-    <strong>▶ Watch the SignLingo Demo Video</strong>
+    <strong>▶ Download the SignLingo Demo Video</strong>
   </a>
 </p>
-
 ---
 
 ## Features
